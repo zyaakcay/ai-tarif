@@ -125,11 +125,11 @@
     </div>
 
     <script>
-        // KRİTİK NOT: API Anahtarı artık burada (istemci tarafında) tutulmuyor.
-        // GÜNCEL DOMAIN'E YÖNLENDİRİLDİ: yapaysef.com
-        const WORKER_ENDPOINT = "https://yapaysef.com/api/generate-recipe"; 
-        
-        // Bu veriler Worker'a gönderilecektir.
+        // KRİTİK UYARI: Bu çözüm güvensizdir ve SADECE TEST amaçlı kullanılmalıdır.
+        // API Anahtarınız buraya yerleştirilmiştir.
+        const API_KEY = "AIzaSyCWfHT7NWugfnnTRu0ETLNgqOCc-twsMms"; 
+        const API_URL = "https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash-preview-09-2025:generateContent";
+
 
         const INITIAL_INGREDIENTS = ['Kıyma', 'Tavuk', 'Pirinç', 'Mercimek', 'Nohut', 'Soğan', 'Domates', 'Patates', 'Yumurta', 'Yoğurt', 'Limon', 'Biber Salçası', 'Un', 'Tereyağı', 'Zeytinyağı', 'Süt'];
         let selectedIngredients = [];
@@ -297,13 +297,21 @@
 
 
         /**
-         * Seçili malzemelerle Cloudflare Worker'a istek gönderir.
+         * Seçili malzemelerle doğrudan Gemini API'ye istek gönderir (Client-side).
          */
         async function findRecipe() {
             if (selectedIngredients.length === 0) {
                 showMessage('Lütfen önce en az bir malzeme seçin.', 'bg-red-500');
                 return;
             }
+            if (!API_KEY) {
+                recipeOutputEl.innerHTML = `<div class="bg-red-100 p-4 rounded-lg border border-red-400">
+                                            <p class="text-red-700 font-semibold text-center">API Anahtarı eksik. Lütfen kodu düzenleyip anahtarınızı yapıştırın.</p>
+                                        </div>`;
+                showMessage("API Anahtarı yapılandırılmadı.", 'bg-red-600');
+                return;
+            }
+
 
             showLoading();
             findRecipeButton.disabled = true;
@@ -321,21 +329,28 @@
             };
 
             try {
-                // İstek artık Worker'a gidiyor. Worker, API anahtarını ekleyip isteği Gemini'ye iletecek.
-                const response = await fetch(WORKER_ENDPOINT, {
+                // Doğrudan Gemini API'ye istek
+                const response = await fetch(`${API_URL}?key=${API_KEY}`, {
                     method: 'POST',
                     headers: { 'Content-Type': 'application/json' },
                     body: JSON.stringify(payload)
                 });
 
                 if (!response.ok) {
-                    // Worker'dan gelen hatayı işleyelim
-                    const errorText = await response.text();
-                    throw new Error(`Worker/API Hatası: ${response.status} - ${errorText}`);
+                    const errorJson = await response.json();
+                    const errorMessage = errorJson.error?.message || `API Hatası: ${response.status}`;
+                    throw new Error(errorMessage);
                 }
 
-                // Worker'dan beklediğimiz yanıt zaten JSON olmalı (Gemini'den Worker'a, Worker'dan bize)
-                const recipeJson = await response.json();
+                const result = await response.json();
+                const recipeText = result.candidates?.[0]?.content?.parts?.[0]?.text;
+                
+                if (!recipeText) {
+                    throw new Error("Yapay Zeka geçerli bir tarif yanıtı üretemedi.");
+                }
+
+                // JSON yanıtını ayrıştır
+                const recipeJson = JSON.parse(recipeText);
 
                 renderRecipe(recipeJson);
                 showMessage('Tarif başarıyla bulundu!', 'bg-green-600');
@@ -343,34 +358,16 @@
             } catch (error) {
                 console.error("Tarif bulma hatası:", error);
                 
-                // Hata mesajını daha spesifik hale getiriyoruz.
-                let errorMessage;
-                if (error.message.includes('Load failed') || error.message.includes('Failed to fetch')) {
-                    errorMessage = `
-                        Tarif bulunurken ağ bağlantı hatası oluştu. Bu, genellikle Pages Rotası hatası demektir.
-                        Lütfen şunları kontrol edin:
-                        <ul class="list-disc list-inside mt-2 text-left space-y-1">
-                            <li>1. **Domain/DNS:** "yapaysef.com" alan adının Cloudflare'a doğru şekilde bağlandığından emin olun.</li>
-                            <li>2. **Worker Rotası (KRİTİK):** Pages Ayarlarınızda, Worker Rotası'nın (Routes) tam olarak 
-                            <code>yapaysef.com/api/generate-recipe*</code> adresini <code>ai-tarif-api</code> Worker'ına yönlendirdiğini kontrol edin.</li>
-                        </ul>
-                    `;
-                } else if (error.message.includes('Worker/API Hatası')) {
-                    errorMessage = `
-                        Worker/API Hatası oluştu. Lütfen şunları kontrol edin:
-                        <ul class="list-disc list-inside mt-2 text-left space-y-1">
-                            <li>1. **API Anahtarı:** Worker Ayarlarında, <code>GEMINI_API_KEY</code> değişkenine doğru Gemini Anahtarını girdiğinizden emin olun.</li>
-                            <li>2. **Worker Logları:** Cloudflare Worker Loglarında hatanın detayını kontrol edin.</li>
-                        </ul>
-                    `;
-                } else {
-                    errorMessage = `Beklenmeyen bir hata oluştu: ${error.message}.`;
-                }
+                // Genel hata mesajı
+                const errorMessage = `
+                    Üzgünüm, tarif bulunamadı. Lütfen internet bağlantınızı kontrol edin veya daha sonra tekrar deneyin. 
+                    (Teknik Detay: ${error.message.substring(0, 100)}...)
+                `;
                 
                 recipeOutputEl.innerHTML = `<div class="bg-red-100 p-4 rounded-lg border border-red-400">
                                             <p class="text-red-700 font-semibold text-center">${errorMessage}</p>
                                         </div>`;
-                showMessage("Ayrıntılı hata mesajı için sonuca bakın.", 'bg-red-600');
+                showMessage("Tarif bulunurken bir sorun oluştu.", 'bg-red-600');
             } finally {
                 findRecipeButton.disabled = false;
             }

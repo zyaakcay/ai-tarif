@@ -1,0 +1,355 @@
+<!DOCTYPE html>
+<html lang="tr">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Dolap Dedi, Yapay Zeka Pişirdi: Yapay Zeka Şefi</title>
+    <!-- Tailwind CSS CDN -->
+    <script src="https://cdn.tailwindcss.com"></script>
+    <!-- Inter Font (Tailwind default) -->
+    <style>
+        body { font-family: 'Inter', sans-serif; background-color: #f7f7f7; }
+        /* Basit yüklenme animasyonu için CSS */
+        .spinner {
+            border: 4px solid rgba(0, 0, 0, 0.1);
+            border-top: 4px solid #10B981; /* Tailwind green-500 */
+            border-radius: 50%;
+            width: 30px;
+            height: 30px;
+            animation: spin 1s linear infinite;
+            margin: 0 auto;
+        }
+        @keyframes spin {
+            0% { transform: rotate(0deg); }
+            100% { transform: rotate(360deg); }
+        }
+    </style>
+</head>
+<body class="min-h-screen flex items-start justify-center p-4 sm:p-6 bg-gray-50">
+
+    <div class="w-full max-w-2xl bg-white shadow-2xl rounded-xl p-6 md:p-8">
+        <header class="text-center mb-8">
+            <h1 class="text-3xl font-extrabold text-blue-600 mb-2">
+                🍽️ Dolap Dedi, Yapay Zeka Pişirdi
+            </h1>
+            <p class="text-gray-600">Elinizdeki malzemeleri seçin, Yapay Zeka size özel Türk mutfağı tarifleri keşfetsin!</p>
+        </header>
+
+        <!-- Malzeme Seçim Alanı -->
+        <section id="ingredient-selection" class="mb-8 p-6 bg-blue-50 rounded-lg shadow-inner">
+            <h2 class="text-xl font-semibold text-blue-700 mb-4">1. Elinizde Hangi Malzemeler Var?</h2>
+            
+            <div id="ingredient-list" class="grid grid-cols-2 sm:grid-cols-3 gap-3">
+                <!-- Önceden tanımlanmış Malzemeler JS ile yüklenecek -->
+            </div>
+
+            <!-- Yeni Malzeme Ekleme Alanı -->
+            <div class="mt-6 pt-4 border-t border-blue-200">
+                <h3 class="text-base font-semibold text-blue-700 mb-2">Eklemek İstediğiniz Farklı Malzeme Var mı?</h3>
+                <div class="flex space-x-2">
+                    <input type="text" id="custom-ingredient-input" placeholder="Örn: limon, beyaz peynir, kinoa..." 
+                           class="flex-1 p-2 border border-gray-300 rounded-lg focus:ring-blue-500 focus:border-blue-500" 
+                           onkeyup="if(event.key === 'Enter') addCustomIngredient()">
+                    <button onclick="addCustomIngredient()" 
+                            class="py-2 px-4 bg-blue-500 text-white font-medium rounded-lg shadow-md hover:bg-blue-600 transition duration-300">
+                        Ekle
+                    </button>
+                </div>
+            </div>
+            
+            <button id="find-button" onclick="findRecipe()" class="mt-6 w-full py-3 px-4 bg-green-500 text-white font-bold rounded-lg shadow-md hover:bg-green-600 transition duration-300 transform hover:scale-[1.01] focus:outline-none focus:ring-4 focus:ring-green-300 disabled:opacity-50" disabled>
+                Tarif Bul!
+            </button>
+        </section>
+
+        <!-- Sonuç Alanı -->
+        <section id="result-section" class="mt-8">
+            <h2 class="text-xl font-semibold text-gray-700 mb-4">2. Size Özel Tarif Önerisi</h2>
+            
+            <div id="recipe-output" class="p-6 bg-white border border-gray-200 rounded-lg shadow-md min-h-[150px] flex items-center justify-center text-center">
+                <p class="text-gray-500 italic">Yukarıdan malzemelerinizi seçip "Tarif Bul!" butonuna tıklayın.</p>
+            </div>
+            
+            <button id="reset-button" onclick="resetApp()" class="hidden mt-4 w-full py-2 px-4 bg-gray-400 text-white font-medium rounded-lg hover:bg-gray-500 transition duration-300">
+                Seçimleri Temizle
+            </button>
+        </section>
+
+        <!-- Hata/Bilgi Kutusu (Kullanıcıya görünür mesajlar için) -->
+        <div id="message-box" class="fixed bottom-4 right-4 p-3 bg-red-500 text-white rounded-lg shadow-xl hidden z-50"></div>
+    </div>
+
+    <script>
+        const API_KEY = ""; // Canvas ortamı tarafından otomatik olarak sağlanacaktır
+        const API_URL = `https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash-preview-09-2025:generateContent?key=${API_KEY}`;
+        
+        // Uygulamada kullanacağımız yaygın Türk mutfağı malzemeleri (UI için sabit liste)
+        const allIngredients = [
+            "pirinç", "kuru soğan", "salça", "domates", "biber", "patates",
+            "tavuk", "kıyma", "yumurta", "yoğurt", "un", "mercimek",
+            "nohut", "fasulye", "havuç", "kabak", "ıspanak", "tereyağı"
+        ].sort();
+
+        let selectedIngredients = [];
+        let lastRecipeName = ""; // Paylaşım için son tarif adını tutar
+        
+        // UI elementlerini önbelleğe al
+        const recipeOutput = document.getElementById('recipe-output');
+        const resetButton = document.getElementById('reset-button');
+        const findButton = document.getElementById('find-button');
+        const ingredientListContainer = document.getElementById('ingredient-list');
+        const customIngredientInput = document.getElementById('custom-ingredient-input'); // Yeni eklenen input
+        const resultSection = document.getElementById('result-section');
+
+        // Basit bir mesaj kutusu gösterme fonksiyonu (alert yerine)
+        function showMessage(text, type = 'error') {
+            const box = document.getElementById('message-box');
+            box.textContent = text;
+            box.className = `fixed bottom-4 right-4 p-3 rounded-lg shadow-xl transition duration-300 ${type === 'success' ? 'bg-green-500' : type === 'info' ? 'bg-blue-500' : 'bg-red-500'} block z-50`;
+            setTimeout(() => {
+                box.classList.add('hidden');
+            }, 5000);
+        }
+
+        // Malzeme seçim butonlarını HTML'e yerleştiren fonksiyon
+        function renderIngredients() {
+            ingredientListContainer.innerHTML = ''; 
+
+            // Hem sabit listeyi hem de seçili özel malzemeleri göster
+            const ingredientsToShow = [...new Set([...allIngredients, ...selectedIngredients.filter(ing => !allIngredients.includes(ing))])].sort();
+
+
+            ingredientsToShow.forEach(ingredient => {
+                const isSelected = selectedIngredients.includes(ingredient);
+                const button = document.createElement('button');
+                
+                // İlk harfi büyük yap
+                button.textContent = ingredient.charAt(0).toUpperCase() + ingredient.slice(1);
+                button.setAttribute('data-ingredient', ingredient);
+                
+                let classes = 'py-2 px-3 rounded-full text-sm font-medium transition duration-200 shadow-sm';
+                
+                // Özel eklenen malzemeler için farklı renk vurgusu
+                const isCustom = !allIngredients.includes(ingredient);
+
+                if (isSelected) {
+                    classes += isCustom 
+                        ? ' bg-purple-600 text-white hover:bg-purple-700' // Seçili ve özel
+                        : ' bg-blue-600 text-white hover:bg-blue-700';   // Seçili ve hazır
+                } else {
+                    classes += isCustom 
+                        ? ' bg-purple-100 text-purple-700 border border-purple-300 hover:bg-purple-200' // Seçili değil ve özel
+                        : ' bg-white text-gray-700 border border-gray-300 hover:bg-gray-100'; // Seçili değil ve hazır
+                }
+
+                button.className = classes;
+                button.onclick = () => toggleIngredient(ingredient);
+                ingredientListContainer.appendChild(button);
+            });
+            // Seçim yapılınca butonu etkinleştir
+            findButton.disabled = selectedIngredients.length === 0;
+        }
+
+        // Yeni eklenen fonksiyon: Özel malzemeyi listeye ekleme
+        function addCustomIngredient() {
+            let ingredient = customIngredientInput.value.trim().toLowerCase();
+            
+            if (ingredient === "") {
+                showMessage("Lütfen bir malzeme adı girin.", 'error');
+                return;
+            }
+            
+            // Çoğul ifadeleri basitleştirme (basit bir deneme)
+            if (ingredient.endsWith("ler") || ingredient.endsWith("lar")) {
+                ingredient = ingredient.substring(0, ingredient.length - 3);
+            }
+            
+            if (!selectedIngredients.includes(ingredient)) {
+                selectedIngredients.push(ingredient);
+                showMessage(`${ingredient.charAt(0).toUpperCase() + ingredient.slice(1)} malzemesi eklendi.`, 'success');
+            } else {
+                showMessage(`${ingredient.charAt(0).toUpperCase() + ingredient.slice(1)} zaten listenizde var.`, 'error');
+            }
+
+            customIngredientInput.value = ''; // Inputu temizle
+            renderIngredients(); // Listeyi güncelle
+        }
+
+
+        // Malzeme seçme/bırakma mantığı
+        function toggleIngredient(ingredient) {
+            const index = selectedIngredients.indexOf(ingredient);
+            if (index > -1) {
+                // Zaten seçiliyse kaldır
+                selectedIngredients.splice(index, 1);
+            } else {
+                // Seçili değilse ekle
+                selectedIngredients.push(ingredient);
+            }
+            renderIngredients(); 
+        }
+
+        // Gemini API Çağrısı (Exponential Backoff ile)
+        async function callGeminiAPI(payload, retries = 3) {
+            for (let i = 0; i < retries; i++) {
+                try {
+                    const response = await fetch(API_URL, {
+                        method: 'POST',
+                        headers: { 'Content-Type': 'application/json' },
+                        body: JSON.stringify(payload)
+                    });
+
+                    if (!response.ok) {
+                        if (response.status === 429 && i < retries - 1) { // 429: Too Many Requests
+                            const delay = Math.pow(2, i) * 1000 + Math.random() * 1000;
+                            await new Promise(resolve => setTimeout(resolve, delay));
+                            continue; // Yeniden dene
+                        }
+                        throw new Error(`API çağrısı başarısız oldu: ${response.statusText}`);
+                    }
+
+                    const result = await response.json();
+                    const jsonText = result.candidates?.[0]?.content?.parts?.[0]?.text;
+                    
+                    if (jsonText) {
+                        return JSON.parse(jsonText);
+                    }
+                    throw new Error("API'den geçerli içerik veya JSON alınamadı.");
+
+                } catch (error) {
+                    console.error("Gemini API hatası:", error);
+                    if (i === retries - 1) throw error; // Son denemede hata fırlat
+                }
+            }
+        }
+
+        // Yeni Fonksiyon: Sosyal medya paylaşımını hazırlar
+        function shareRecipe() {
+            if (!lastRecipeName) {
+                showMessage("Paylaşılacak bir tarif bulunamadı.", 'error');
+                return;
+            }
+            
+            const shareText = `Elimdeki malzemelerle "${lastRecipeName}" tarifini buldum! 😋 Siz de dolabınızdaki malzemelerle tarif aramak için Dolap Dedi, Yapay Zeka Pişirdi uygulamasını deneyin! #YapayZekaŞefi #NePişirsem`;
+            const shareUrl = window.location.href; // Uygulamanın URL'sini kullanır
+
+            // Basit bir kopyalama mekanizması kullanalım
+            const tempInput = document.createElement('textarea');
+            tempInput.value = shareText + "\n\n" + shareUrl;
+            document.body.appendChild(tempInput);
+            tempInput.select();
+            document.execCommand('copy');
+            document.body.removeChild(tempInput);
+
+            showMessage("Paylaşım metni panoya kopyalandı! (Sosyal medyada paylaşabilirsiniz)", 'success');
+        }
+
+        // Tarif bulma ana mantığı
+        async function findRecipe() {
+            recipeOutput.innerHTML = '';
+            resetButton.classList.add('hidden');
+            findButton.disabled = true;
+            lastRecipeName = ""; // Yeni arama öncesi temizle
+
+            if (selectedIngredients.length === 0) {
+                recipeOutput.innerHTML = '<p class="text-red-500 font-semibold">Lütfen en az bir malzeme seçin!</p>';
+                findButton.disabled = false;
+                return;
+            }
+
+            // Loading state
+            recipeOutput.innerHTML = `
+                <div class="text-center p-4">
+                    <div class="spinner mb-3"></div>
+                    <p class="text-blue-600 font-medium">Size özel tarifler aranıyor...</p>
+                </div>
+            `;
+            showMessage("Yapay zeka tarifleri oluşturuyor...", 'info');
+            
+            const userQuery = `Eldeki malzemeler: ${selectedIngredients.join(', ')}. Bu malzemelerle hazırlanabilecek 1 adet Türk mutfağı yemeği tarifi bul. Tarifin basit ve ev koşullarına uygun olmasına dikkat et.`;
+            
+            const systemPrompt = "Sen, sadece Türk mutfağına odaklanan, kullanıcının elindeki malzemelerle en uygun tarifi bulan deneyimli bir aşçısın. Sadece JSON formatında, belirtilen şemaya uygun bir tarif dizisi döndür. Başka hiçbir açıklama, giriş veya çıkış metni ekleme.";
+
+            const payload = {
+                contents: [{ parts: [{ text: userQuery }] }],
+                systemInstruction: { parts: [{ text: systemPrompt }] },
+                generationConfig: {
+                    responseMimeType: "application/json",
+                    responseSchema: {
+                        type: "ARRAY",
+                        items: {
+                            type: "OBJECT",
+                            properties: {
+                                "name": { "type": "STRING", "description": "Yemek tarifi adı (Türkçe)" },
+                                "ingredients": { "type": "ARRAY", "description": "Gerekli ana malzemelerin listesi (Türkçe)", "items": { "type": "STRING" } },
+                                "recipe": { "type": "STRING", "description": "Yemeğin kısa, adım adım hazırlanışı (Türkçe)" }
+                            },
+                            "propertyOrdering": ["name", "ingredients", "recipe"]
+                        }
+                    }
+                }
+            };
+            
+            try {
+                const recipes = await callGeminiAPI(payload);
+
+                if (recipes && recipes.length > 0) {
+                    const chosenRecipe = recipes[0];
+                    lastRecipeName = chosenRecipe.name; // Tarif adını paylaşım için kaydet
+
+                    // Sonucu HTML'e yerleştir
+                    recipeOutput.innerHTML = `
+                        <div class="w-full text-left">
+                            <p class="text-xs text-green-500 uppercase font-bold mb-1">Yapay Zeka Tarifiniz</p>
+                            <h3 class="text-2xl font-bold text-gray-800 mb-3">${chosenRecipe.name}</h3>
+                            <p class="text-gray-700 mb-4 whitespace-pre-wrap">${chosenRecipe.recipe}</p>
+                            <div class="p-3 bg-gray-100 rounded-lg text-sm">
+                                <span class="font-semibold text-gray-600 block mb-1">Gerekli Ana Malzemeler:</span>
+                                <span class="text-gray-800">${chosenRecipe.ingredients.map(i => i.charAt(0).toUpperCase() + i.slice(1)).join(', ')}</span>
+                            </div>
+                        </div>
+                    `;
+                    
+                    // Paylaş butonunu ekle
+                    const shareButton = document.createElement('button');
+                    shareButton.textContent = "✨ Bu Tarife Bayıldım! Paylaş";
+                    shareButton.className = 'mt-4 w-full py-2 px-4 bg-yellow-500 text-white font-bold rounded-lg shadow-lg hover:bg-yellow-600 transition duration-300 transform hover:scale-[1.01]';
+                    shareButton.onclick = shareRecipe;
+                    recipeOutput.appendChild(shareButton);
+
+
+                    showMessage("Harika! Size özel bir tarif bulundu.", 'success');
+                } else {
+                     recipeOutput.innerHTML = `
+                        <p class="text-lg font-medium text-orange-600">Üzgünüm, seçtiğiniz malzemelerle eşleşen Türk mutfağı tarifi bulamadım.</p>
+                        <p class="text-gray-500 mt-2">Daha fazla malzeme eklemeyi deneyin veya seçimlerinizi değiştirin. (AI, bazen çok kısıtlı malzemelerle sonuç üretemeyebilir.)</p>
+                    `;
+                    showMessage("Eşleşen tarif bulunamadı.", 'error');
+                }
+            } catch (error) {
+                 recipeOutput.innerHTML = `
+                    <p class="text-lg font-medium text-red-600">Tarif bulunurken bir hata oluştu.</p>
+                    <p class="text-gray-500 mt-2">Lütfen internet bağlantınızı kontrol edin veya daha sonra tekrar deneyin.</p>
+                `;
+                showMessage("API çağrısı sırasında kritik hata oluştu.", 'error');
+            } finally {
+                resetButton.classList.remove('hidden');
+                findButton.disabled = false;
+            }
+        }
+
+        // Uygulamayı sıfırlama fonksiyonu
+        function resetApp() {
+            selectedIngredients = [];
+            renderIngredients();
+            recipeOutput.innerHTML = '<p class="text-gray-500 italic">Yukarıdan malzemelerinizi seçip "Tarif Bul!" butonuna tıklayın.</p>';
+            resetButton.classList.add('hidden');
+            lastRecipeName = ""; // Paylaşım adını da temizle
+            showMessage("Seçimleriniz temizlendi.", 'success');
+        }
+
+        // Uygulama yüklendiğinde malzeme listesini oluştur
+        window.onload = renderIngredients;
+    </script>
+</body>
+</html>

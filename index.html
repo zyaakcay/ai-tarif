@@ -15,7 +15,7 @@
         }
         /* Custom scrollbar for recipe content */
         #recipe-output {
-            max-height: 400px;
+            max-height: 500px;
             overflow-y: auto;
             scrollbar-width: thin; /* Firefox */
             scrollbar-color: #3b82f6 #f1f1f1; /* Firefox */
@@ -34,65 +34,84 @@
 </head>
 <body class="p-4 sm:p-8 min-h-screen flex items-start justify-center">
 
-    <div class="w-full max-w-4xl bg-white shadow-2xl rounded-xl p-6 sm:p-8">
+    <div class="w-full max-w-5xl bg-white shadow-2xl rounded-xl p-8 sm:p-10">
 
         <!-- Başlık Bölümü -->
-        <header class="text-center mb-8 border-b pb-4">
+        <header class="text-center mb-10 border-b pb-4">
             <h1 class="text-4xl sm:text-5xl font-extrabold text-gray-800 tracking-tight">
                 Dolap Dedi, Yapay Zeka Pişirdi
             </h1>
             <p class="text-xl text-indigo-500 mt-2">Yapay Zeka Şefinizden Anında Türk Mutfağı Tarifleri</p>
         </header>
 
-        <!-- Malzeme Seçim Bölümü -->
-        <section class="mb-8 p-4 border rounded-lg bg-gray-50">
-            <h2 class="text-2xl font-semibold text-gray-700 mb-4">1. Evdeki Malzemeleri Seçin</h2>
-
-            <div id="ingredient-list" class="flex flex-wrap gap-2 mb-4">
-                <!-- Malzeme Butonları Buraya JS ile Doldurulacak -->
-            </div>
+        <!-- Ana Konteyner: Giriş (Sol) ve Aksiyon/Özet (Sağ) -->
+        <div class="grid grid-cols-1 lg:grid-cols-3 gap-8">
             
-            <!-- Özel Malzeme Ekleme Alanı -->
-            <div class="flex flex-col sm:flex-row gap-2 mt-6">
-                <input type="text" id="custom-ingredient-input" onkeyup="if(event.key === 'Enter') addCustomIngredient()" 
-                       placeholder="Eklemek istediğiniz özel malzemeyi yazın (Örn: Ispanak, Salça, Yumurta)"
-                       class="flex-grow p-3 border border-gray-300 rounded-lg focus:ring-indigo-500 focus:border-indigo-500">
-                <button onclick="addCustomIngredient()" 
-                        class="bg-purple-600 hover:bg-purple-700 text-white font-semibold py-3 px-4 rounded-lg transition duration-300 shadow-md">
-                    Ekle
-                </button>
-            </div>
-        </section>
-        
-        <!-- Seçilen Malzemeler ve Butonlar -->
-        <section class="mb-8 p-4 border rounded-lg bg-white shadow-sm">
-            <h2 class="text-2xl font-semibold text-gray-700 mb-4">2. Seçimleriniz</h2>
-            <div id="selected-ingredients-display" class="text-lg text-gray-600 mb-4 h-8">
-                Henüz malzeme seçilmedi.
+            <!-- SOL Sütun: Malzeme Seçimi ve Ekleme (Geniş Alan) -->
+            <div class="lg:col-span-2">
+                <section class="p-6 border rounded-xl bg-gray-50 shadow-md">
+                    
+                    <h2 class="text-2xl font-bold text-gray-800 mb-4 border-b pb-2 text-indigo-600">1. Dolaptakiler: Seç & Ekle</h2>
+                    
+                    <!-- Hazır Malzeme Butonları -->
+                    <div id="ingredient-list" class="flex flex-wrap gap-2 mb-6">
+                        <!-- Malzeme Butonları Buraya JS ile Doldurulacak -->
+                    </div>
+                    
+                    <!-- Özel Malzeme Ekleme Alanı -->
+                    <div class="mt-4 border-t pt-4">
+                        <h3 class="text-xl font-semibold text-gray-700 mb-3">Veya Elinizdeki Başka Bir Malzemeyi Ekleyin</h3>
+                        <div class="flex flex-col sm:flex-row gap-2">
+                            <input type="text" id="custom-ingredient-input" onkeyup="if(event.key === 'Enter') addCustomIngredient()" 
+                                placeholder="Örn: Tereyağı, Bezelye, Pırasa"
+                                class="flex-grow p-3 border border-gray-300 rounded-lg focus:ring-purple-500 focus:border-purple-500">
+                            <button onclick="addCustomIngredient()" 
+                                    class="bg-purple-600 hover:bg-purple-700 text-white font-semibold py-3 px-4 rounded-lg transition duration-300 shadow-md">
+                                Ekle
+                            </button>
+                        </div>
+                    </div>
+                </section>
             </div>
 
-            <div class="flex justify-between gap-4 flex-wrap">
-                <button id="find-recipe-button" onclick="findRecipe()" disabled
-                        class="flex-grow bg-indigo-500 text-white font-bold py-3 px-6 rounded-lg transition duration-300 opacity-50 cursor-not-allowed shadow-xl hover:shadow-2xl disabled:opacity-50">
-                    Tarif Bul! 🚀
-                </button>
-                <button onclick="clearSelections()"
-                        class="bg-gray-300 hover:bg-gray-400 text-gray-800 font-semibold py-3 px-6 rounded-lg transition duration-300">
-                    Seçimleri Temizle
-                </button>
+            <!-- SAĞ Sütun: Aksiyon ve Özet (Daha Dar Alan) -->
+            <div class="lg:col-span-1">
+                <section class="sticky top-8 p-6 rounded-xl bg-indigo-50 border-2 border-indigo-200 shadow-xl">
+                    
+                    <h3 class="text-xl font-bold text-indigo-700 mb-4 border-b pb-2">2. Seçim Özeti ve Aksiyon</h3>
+                    
+                    <!-- Seçilen Malzemeler Özeti -->
+                    <div id="selected-ingredients-display" class="text-md text-gray-700 mb-6 min-h-[4rem] bg-white p-3 rounded-lg border shadow-inner">
+                        Henüz malzeme seçilmedi.
+                    </div>
+                    
+                    <!-- Aksiyon Butonları -->
+                    <div class="flex flex-col gap-3">
+                        <button id="find-recipe-button" onclick="findRecipe()" disabled
+                                class="bg-indigo-500 text-white font-bold py-3 px-6 rounded-lg transition duration-300 opacity-50 cursor-not-allowed shadow-xl hover:shadow-2xl disabled:opacity-50">
+                            Tarif Bul! 🚀
+                        </button>
+                        <button onclick="clearSelections()"
+                                class="bg-gray-300 hover:bg-gray-400 text-gray-800 font-semibold py-3 px-6 rounded-lg transition duration-300">
+                            Seçimleri Temizle
+                        </button>
+                    </div>
+                </section>
             </div>
-        </section>
+        </div>
 
         <!-- Sonuç Bölümü -->
-        <section class="mt-8 p-6 border-2 border-dashed border-indigo-200 rounded-xl bg-indigo-50">
-            <h2 class="text-2xl font-semibold text-indigo-700 mb-4 text-center">3. Yapay Zeka Şefinin Tarifi</h2>
-            <div id="recipe-output" class="text-gray-800 p-4 bg-white rounded-lg shadow-inner">
-                <p id="initial-message" class="text-center text-gray-500 italic">Lütfen malzemeleri seçin ve "Tarif Bul!" butonuna tıklayın.</p>
+        <section class="mt-12 p-8 border-4 border-double border-indigo-400 rounded-xl bg-white shadow-2xl shadow-indigo-100">
+            
+            <h2 class="text-3xl font-extrabold text-indigo-700 mb-6 text-center border-b pb-3">3. Şefin Önerisi</h2>
+            
+            <div id="recipe-output" class="text-gray-800 p-4 rounded-lg shadow-inner bg-gray-50">
+                <p id="initial-message" class="text-center text-lg text-gray-500 italic">Lütfen dolabınızdaki malzemeleri seçin ve yapay zeka şefinizi çalıştırın!</p>
             </div>
             
             <!-- Paylaşım Butonu -->
-            <div id="share-section" class="mt-4 text-center hidden">
-                <button onclick="shareRecipe()" class="bg-green-500 hover:bg-green-600 text-white font-semibold py-2 px-4 rounded-lg transition duration-300 shadow-md">
+            <div id="share-section" class="mt-6 text-center hidden">
+                <button onclick="shareRecipe()" class="bg-green-500 hover:bg-green-600 text-white font-semibold py-3 px-6 rounded-lg transition duration-300 shadow-xl">
                     Bu Tarife Bayıldım! Paylaş 📋
                 </button>
             </div>
@@ -104,9 +123,9 @@
     </div>
 
     <script>
-        // CRITICAL: Worker'ınızın URL'si. Bu adres Cloudflare Pages'daki ROTAYA gitmelidir.
-        // Pages bu isteği alacak ve rotada tanımladığımız "ai-tarif-api" Worker'ına yönlendirecektir.
-        const WORKER_ENDPOINT = "https://zya.acmteches.com/api/generate-recipe"; 
+        // UYARI: Bu yöntem, API anahtarınızı herkesin görebileceği şekilde tutar. Yalnızca test amaçlı kullanılmalıdır.
+        const API_KEY = "AIzaSyCWfHT7NWugfnnTRu0ETLNgqOCc-twsMms"; 
+        const API_URL = "https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash-preview-09-2025:generateContent";
 
         const INITIAL_INGREDIENTS = ['Kıyma', 'Tavuk', 'Pirinç', 'Mercimek', 'Nohut', 'Soğan', 'Domates', 'Patates', 'Yumurta', 'Yoğurt', 'Limon', 'Biber Salçası', 'Un', 'Tereyağı', 'Zeytinyağı', 'Süt'];
         let selectedIngredients = [];
@@ -207,9 +226,9 @@
             findRecipeButton.classList.toggle('cursor-not-allowed', selectedIngredients.length === 0);
             
             if (selectedIngredients.length > 0) {
-                selectedIngredientsDisplayEl.innerHTML = `Seçili: <span class="font-bold text-indigo-700">${selectedIngredients.join(', ')}</span>`;
+                selectedIngredientsDisplayEl.innerHTML = `<span class="font-bold text-indigo-700">${selectedIngredients.join(', ')}</span>`;
             } else {
-                selectedIngredientsDisplayEl.textContent = 'Henüz malzeme seçilmedi.';
+                selectedIngredientsDisplayEl.textContent = 'Lütfen listeden veya aşağıdaki kutudan en az bir malzeme seçin.';
             }
         }
 
@@ -219,7 +238,7 @@
         function clearSelections() {
             selectedIngredients = [];
             renderIngredients();
-            recipeOutputEl.innerHTML = `<p id="initial-message" class="text-center text-gray-500 italic">Lütfen malzemeleri seçin ve "Tarif Bul!" butonuna tıklayın.</p>`;
+            recipeOutputEl.innerHTML = `<p id="initial-message" class="text-center text-lg text-gray-500 italic">Lütfen dolabınızdaki malzemeleri seçin ve yapay zeka şefinizi çalıştırın!</p>`;
             shareSectionEl.classList.add('hidden');
             showMessage('Seçimleriniz temizlendi.', 'bg-yellow-500');
         }
@@ -254,9 +273,27 @@
         }
 
         // --- API ve İş Mantığı ---
+        
+        // JSON formatı tanımı
+        const recipeSchema = {
+            type: "OBJECT",
+            properties: {
+                "recipeName": { "type": "STRING", "description": "Tarifin Türkçe Adı" },
+                "ingredients": {
+                    "type": "ARRAY",
+                    "items": { "type": "STRING", "description": "Gerekli tüm malzemeler (miktar belirtilerek)" }
+                },
+                "recipe": {
+                    "type": "ARRAY",
+                    "items": { "type": "STRING", "description": "Hazırlanış adımları." }
+                }
+            },
+            "propertyOrdering": ["recipeName", "ingredients", "recipe"]
+        };
+
 
         /**
-         * Seçili malzemelerle Gemini API'sine istek gönderir (Worker üzerinden).
+         * Seçili malzemelerle Gemini API'sine doğrudan istek gönderir.
          */
         async function findRecipe() {
             if (selectedIngredients.length === 0) {
@@ -264,45 +301,63 @@
                 return;
             }
 
+            if (API_KEY === "BURAYA_GEMINI_API_ANAHTARINIZI_YAPISTIRIN" || API_KEY.length < 20) {
+                 const manualKeyError = "API Anahtarı bulunamadı. Lütfen index.html dosyasındaki API_KEY değişkenini kendi anahtarınızla güncelleyin.";
+                 recipeOutputEl.innerHTML = `<p class="text-red-500 font-semibold text-center p-4">${manualKeyError}</p>`;
+                 showMessage(manualKeyError, 'bg-red-500');
+                 return;
+            }
+
             showLoading();
             findRecipeButton.disabled = true;
 
+            const systemPrompt = "Sen, Türkiye'deki ev mutfaklarına odaklanmış, uzman ve pratik bir Yapay Zeka Şefisin. Gönderilen malzemelerle sadece Türk Mutfağına ait basit ve günlük bir yemek tarifi oluştur. Cevabını Türkçe ve tam olarak verilen JSON şemasına uygun olarak döndür.";
             const userQuery = `Elimde bu malzemeler var: ${selectedIngredients.join(', ')}. Sadece bu malzemelerden (veya ek olarak temel mutfak malzemeleri kullanarak) hazırlanabilecek, Türk Mutfağına özgü, basit ve günlük bir yemek tarifi bul.`;
 
+            const payload = {
+                contents: [{ parts: [{ text: userQuery }] }],
+                systemInstruction: { parts: [{ text: systemPrompt }] },
+                generationConfig: {
+                    responseMimeType: "application/json",
+                    responseSchema: recipeSchema
+                }
+            };
+
             try {
-                // API isteğini Worker'a gönderiyoruz
-                const response = await fetch(WORKER_ENDPOINT, {
+                const response = await fetch(`${API_URL}?key=${API_KEY}`, {
                     method: 'POST',
                     headers: { 'Content-Type': 'application/json' },
-                    body: JSON.stringify({ userQuery })
+                    body: JSON.stringify(payload)
                 });
 
                 if (!response.ok) {
-                    throw new Error(`Worker'dan HTTP hatası: ${response.status}`);
+                    throw new Error(`API Hatası: ${response.status} - ${response.statusText}`);
                 }
 
                 const result = await response.json();
                 
-                // Worker'dan gelen hata mesajını kontrol et
-                if (result.error) {
-                     throw new Error(result.error);
+                const responseText = result.candidates?.[0]?.content?.parts?.[0]?.text;
+
+                if (!responseText) {
+                    throw new Error("API'den geçerli bir cevap alınamadı.");
                 }
 
                 // API'den gelen JSON metnini parse et
-                const recipeJson = JSON.parse(result.text);
+                const recipeJson = JSON.parse(responseText);
 
                 renderRecipe(recipeJson);
                 showMessage('Tarif başarıyla bulundu!', 'bg-green-500');
 
             } catch (error) {
                 console.error("Tarif bulma hatası:", error);
-                const errorMessage = "Tarif bulunurken bir hata oluştu. Lütfen Cloudflare Worker ayarlarını (Örn: API Anahtarını) kontrol edin veya daha sonra tekrar deneyin.";
+                const errorMessage = `Tarif bulunurken bir hata oluştu: ${error.message}. Lütfen API Anahtarınızın doğru ve geçerli olduğundan emin olun.`;
                 recipeOutputEl.innerHTML = `<p class="text-red-500 font-semibold text-center p-4">${errorMessage}</p>`;
                 showMessage(errorMessage, 'bg-red-500');
             } finally {
                 findRecipeButton.disabled = false;
             }
         }
+
 
         /**
          * Gelen JSON tarifini HTML olarak ekrana basar.
@@ -315,19 +370,28 @@
             html += `<div class="mb-4">
                         <p class="text-xl font-semibold text-gray-700 mb-2">Gerekli Malzemeler:</p>
                         <ul class="list-disc list-inside ml-4 text-gray-700">`;
-            recipe.ingredients.forEach(item => {
-                html += `<li class="mb-1">${item}</li>`;
-            });
+            // Dizi kontrolü ekle
+            if (Array.isArray(recipe.ingredients)) {
+                recipe.ingredients.forEach(item => {
+                    html += `<li class="mb-1">${item}</li>`;
+                });
+            } else {
+                 html += `<li class="mb-1 text-red-500">Malzeme listesi okunamadı. Lütfen API cevabını kontrol edin.</li>`;
+            }
             html += `</ul></div>`;
 
             // Hazırlanış
             html += `<div class="mb-4">
                         <p class="text-xl font-semibold text-gray-700 mb-2">Hazırlanışı:</p>
                         <ol class="list-decimal list-inside ml-4 text-gray-700">`;
-            // Hazırlanış adımları dizide gelmelidir
-            recipe.recipe.forEach(step => {
-                html += `<li class="mb-2">${step}</li>`;
-            });
+            // Dizi kontrolü ekle
+             if (Array.isArray(recipe.recipe)) {
+                recipe.recipe.forEach(step => {
+                    html += `<li class="mb-2">${step}</li>`;
+                });
+            } else {
+                 html += `<li class="mb-2 text-red-500">Hazırlanış adımları okunamadı. Lütfen API cevabını kontrol edin.</li>`;
+            }
             html += `</ol></div>`;
 
             recipeOutputEl.innerHTML = html;

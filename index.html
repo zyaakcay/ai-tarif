@@ -2,7 +2,7 @@
 <html lang="tr">
 <head>
     <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta name="viewport" content="content="width=device-width, initial-scale=1.0">
     <title>Dolap Dedi, Yapay Zeka Pişirdi: Yapay Zeka Şefi</title>
     <!-- Tailwind CSS CDN -->
     <script src="https://cdn.tailwindcss.com"></script>
@@ -125,9 +125,11 @@
     </div>
 
     <script>
-        // UYARI: Bu yöntem, API anahtarınızı herkesin görebileceği şekilde tutar. Yalnızca test amaçlı kullanılmalıdır.
-        const API_KEY = "AIzaSyCWfHT7NWugfnnTRu0ETLNgqOCc-twsMms"; 
-        const API_URL = "https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash-preview-09-2025:generateContent";
+        // KRİTİK NOT: API Anahtarı artık burada (istemci tarafında) tutulmuyor.
+        // GÜNCEL DOMAIN'E YÖNLENDİRİLDİ: yapaysef.com
+        const WORKER_ENDPOINT = "https://yapaysef.com/api/generate-recipe"; 
+        
+        // Bu veriler Worker'a gönderilecektir.
 
         const INITIAL_INGREDIENTS = ['Kıyma', 'Tavuk', 'Pirinç', 'Mercimek', 'Nohut', 'Soğan', 'Domates', 'Patates', 'Yumurta', 'Yoğurt', 'Limon', 'Biber Salçası', 'Un', 'Tereyağı', 'Zeytinyağı', 'Süt'];
         let selectedIngredients = [];
@@ -295,19 +297,12 @@
 
 
         /**
-         * Seçili malzemelerle Gemini API'sine doğrudan istek gönderir.
+         * Seçili malzemelerle Cloudflare Worker'a istek gönderir.
          */
         async function findRecipe() {
             if (selectedIngredients.length === 0) {
                 showMessage('Lütfen önce en az bir malzeme seçin.', 'bg-red-500');
                 return;
-            }
-
-            if (API_KEY === "BURAYA_GEMINI_API_ANAHTARINIZI_YAPISTIRIN" || API_KEY.length < 20) {
-                 const manualKeyError = "API Anahtarı bulunamadı. Lütfen index.html dosyasındaki API_KEY değişkenini kendi anahtarınızla güncelleyin.";
-                 recipeOutputEl.innerHTML = `<p class="text-red-500 font-semibold text-center p-4">${manualKeyError}</p>`;
-                 showMessage(manualKeyError, 'bg-red-500');
-                 return;
             }
 
             showLoading();
@@ -326,33 +321,28 @@
             };
 
             try {
-                const response = await fetch(`${API_URL}?key=${API_KEY}`, {
+                // İstek artık Worker'a gidiyor. Worker, API anahtarını ekleyip isteği Gemini'ye iletecek.
+                const response = await fetch(WORKER_ENDPOINT, {
                     method: 'POST',
                     headers: { 'Content-Type': 'application/json' },
                     body: JSON.stringify(payload)
                 });
 
                 if (!response.ok) {
-                    throw new Error(`API Hatası: ${response.status} - ${response.statusText}`);
+                    // Worker'dan gelen hatayı işleyelim
+                    const errorText = await response.text();
+                    throw new Error(`Worker/API Hatası: ${response.status} - ${errorText}`);
                 }
 
-                const result = await response.json();
-                
-                const responseText = result.candidates?.[0]?.content?.parts?.[0]?.text;
-
-                if (!responseText) {
-                    throw new Error("API'den geçerli bir cevap alınamadı.");
-                }
-
-                // API'den gelen JSON metnini parse et
-                const recipeJson = JSON.parse(responseText);
+                // Worker'dan beklediğimiz yanıt zaten JSON olmalı (Gemini'den Worker'a, Worker'dan bize)
+                const recipeJson = await response.json();
 
                 renderRecipe(recipeJson);
                 showMessage('Tarif başarıyla bulundu!', 'bg-green-600');
 
             } catch (error) {
                 console.error("Tarif bulma hatası:", error);
-                const errorMessage = `Tarif bulunurken bir hata oluştu: ${error.message}. Lütfen API Anahtarınızın doğru ve geçerli olduğundan emin olun.`;
+                const errorMessage = `Tarif bulunurken bir hata oluştu: ${error.message}. Lütfen Cloudflare Worker ayarlarınızı (Rota ve API Anahtarı) kontrol edin.`;
                 recipeOutputEl.innerHTML = `<p class="text-red-600 font-semibold text-center p-4">${errorMessage}</p>`;
                 showMessage(errorMessage, 'bg-red-600');
             } finally {
@@ -405,7 +395,7 @@
          */
         function shareRecipe() {
             const recipeName = recipeOutputEl.querySelector('h3') ? recipeOutputEl.querySelector('h3').textContent : 'Harika bir tarif';
-            const shareText = `Dolabımda bu malzemeler vardı, Yapay Zeka Şefi bana "${recipeName}" tarifini buldu! Siz de kendi tarifinizi bulun: https://zya.acmteches.com`;
+            const shareText = `Dolabımda bu malzemeler vardı, Yapay Zeka Şefi bana "${recipeName}" tarifini buldu! Siz de kendi tarifinizi bulun: https://yapaysef.com`;
 
             // Panoya kopyalama
             navigator.clipboard.writeText(shareText)
